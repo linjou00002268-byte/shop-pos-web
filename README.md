@@ -1,36 +1,72 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Shop POS & Inventory — Backend API (Next.js + Supabase)
 
-## Getting Started
+ໄຟລ໌ຊຸດນີ້ແມ່ນ API routes ທີ່ແປງມາຈາກ Google Apps Script (`Code.gs`) ເດີມ
+ໃຫ້ໃຊ້ກັບ Supabase (Postgres) ຕາມ `schema.sql` ທີ່ໄດ້ສ້າງໄວ້ກ່ອນໜ້ານີ້.
 
-First, run the development server:
+## ວິທີໃຊ້
 
+1. ສ້າງໂປຣເຈັກ Next.js ໃໝ່:
+   ```
+   npx create-next-app@latest shop-pos-web
+   cd shop-pos-web
+   npm install @supabase/supabase-js
+   ```
+
+2. ຄັດລອກໂຟນເດີ `app/api/` ແລະ ໄຟລ໌ `lib/supabase.js` ຈາກຊຸດນີ້
+   ໄປວາງທັບໃນໂປຣເຈັກທີ່ສ້າງໃໝ່ (ຮັກສາໂຄງສ້າງໂຟນເດີໃຫ້ຄືເດີມ)
+
+3. ຄັດລອກ `.env.local.example` → ປ່ຽນຊື່ເປັນ `.env.local` → ໃສ່ຄ່າ
+   `SUPABASE_URL` ແລະ `SUPABASE_SERVICE_ROLE_KEY` ຈິງຂອງເຈົ້າ
+   (ຢູ່ Supabase: Project Settings > API)
+
+4. ລັນ `npm run dev` ແລ້ວທົດສອບແຕ່ລະ endpoint:
+
+| Method | Endpoint | ໜ້າທີ່ | ແທນ GAS function |
+|---|---|---|---|
+| GET | `/api/products` | ລາຍການສິນຄ້າ+ໝວດໝູ່+ສະຖານະ | `getAllProductsReport` |
+| POST | `/api/products` | ເພີ່ມສິນຄ້າໃໝ່ | `addNewProduct` |
+| PUT | `/api/products/:id` | ແກ້ໄຂຂໍ້ມູນສິນຄ້າ | `updateProductDetails` |
+| GET | `/api/products/low-stock?limit=5` | ສິນຄ້າໃກ້ໝົດ | `getLowStockProducts` |
+| POST | `/api/sales` | ບັນທຶກການຂາຍ (atomic) | `processSale` |
+| GET | `/api/sales` | ປະຫວັດການຂາຍ | `getSalesHistory` |
+| POST | `/api/stock/receive` | ຮັບສິນຄ້າເຂົ້າຄັງ | `updateStockReceive(WithPrices)` |
+| GET | `/api/reports/dashboard` | ຂໍ້ມູນ Dashboard | `getReportData` |
+
+## ຕົວຢ່າງທົດສອບດ້ວຍ curl
+
+ບັນທຶກການຂາຍ:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+curl -X POST http://localhost:3000/api/sales \
+  -H "Content-Type: application/json" \
+  -d '{"cart":[{"id":"P001","qty":2,"price":15000}]}'
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+ຮັບສິນຄ້າເຂົ້າຄັງ:
+```bash
+curl -X POST http://localhost:3000/api/stock/receive \
+  -H "Content-Type: application/json" \
+  -d '{"productId":"P001","qty":10,"location":"ຄັງ A"}'
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Frontend (6 ໜ້າ)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+ໄຟລ໌ຊຸດນີ້ມີໜ້າຕາຄົບແລ້ວ ຢູ່ໃນ `app/`:
 
-## Learn More
+| Route | ໜ້າທີ່ |
+|---|---|
+| `/` | Dashboard — ພາບລວມ, ສະຖິຕິ, ສິນຄ້າໃກ້ໝົດ |
+| `/pos` | ຂາຍເຄື່ອງ — ຄົ້ນຫາສິນຄ້າ, ກະຕ່າ, ຢືນຢັນການຂາຍ |
+| `/receive` | ຮັບເຂົ້າຄັງ — ຮັບສິນຄ້າເກົ່າ ຫຼືເພີ່ມສິນຄ້າໃໝ່ |
+| `/inventory` | ຄັງສິນຄ້າ — ຕາຕະລາງ+ຄົ້ນຫາ+ແກ້ໄຂ inline |
+| `/history` | ປະຫວັດການຂາຍ — ລາຍການໃບບິນ+ລາຍລະອຽດ |
+| `/low-stock` | ສິນຄ້າໃກ້ໝົດຄັງ |
 
-To learn more about Next.js, take a look at the following resources:
+ໂຄງສ້າງເພີ່ມເຕີມ: `components/Sidebar.js` (navigation), `app/globals.css` (design tokens),
+`app/layout.js` (layout ຫຼັກ), `lib/format.js` (format ຕົວເລກ/ວັນທີ)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## ຍັງເຫຼືອອີກ
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `addNewProductAndReceive` — ລວມ POST /api/products + POST /api/stock/receive ຝັ່ງ frontend
+  ໄດ້ເລີຍ (ເອີ້ນ 2 ຄັ້ງຕໍ່ກັນ) ຫຼືສ້າງ endpoint ລວມແຍກຕ່າງຫາກຖ້າຕ້ອງການ
+- Authentication ຍັງບໍ່ໄດ້ໃສ່ — ຄວນເພີ່ມ middleware ກວດ session ກ່ອນ deploy ຈິງ
+  (ໃຜກໍ່ຕາມທີ່ມີ URL ຕອນນີ້ ສາມາດຂາຍເຄື່ອງ/ແກ້ໄຂຂໍ້ມູນໄດ້ໂດຍກົງ)
