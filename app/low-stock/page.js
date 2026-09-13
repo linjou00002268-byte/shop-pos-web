@@ -1,85 +1,113 @@
 // app/low-stock/page.js
 'use client';
 
-import { useEffect, useState } from 'react';
-import Link from 'next/link';
+import { useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function LowStockPage() {
-  const [items, setItems] = useState([]);
+  const [items, setItems] = useState(null); // null = loading
   const [limit, setLimit] = useState(5);
-  const [loading, setLoading] = useState(true);
-
-  function load(l) {
-    setLoading(true);
-    fetch(`/api/products/low-stock?limit=${l}`)
-      .then((res) => res.json())
-      .then((json) => setItems(Array.isArray(json) ? json : []))
-      .finally(() => setLoading(false));
-  }
+  const swalRef = useRef(null);
+  const router = useRouter();
 
   useEffect(() => {
-    load(limit);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    import('sweetalert2').then((m) => (swalRef.current = m.default));
+    load(5);
   }, []);
 
+  function load(l) {
+    setItems(null);
+    fetch(`/api/products/low-stock?limit=${l}`)
+      .then((res) => res.json())
+      .then((json) => setItems(Array.isArray(json) ? json : []));
+  }
+
+  function goToReceive(barcode, name) {
+    swalRef.current
+      ?.fire({
+        title: 'ຢືນຢັນການເຕີມສະຕັອກ?',
+        text: `ຕ້ອງການເຕີມສະຕັອກສິນຄ້າ: ${name || barcode} ບໍ່?`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#0d6efd',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'ໄປໜ້າຮັບສິນຄ້າ',
+        cancelButtonText: 'ຍົກເລີກ',
+      })
+      .then((result) => {
+        if (result.isConfirmed) {
+          router.push(`/receive?barcode=${encodeURIComponent(barcode)}`);
+        }
+      });
+  }
+
   return (
-    <>
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">ສິນຄ້າໃກ້ໝົດຄັງ</h1>
-          <p className="page-subtitle">ລາຍການສິນຄ້າທີ່ຄົງເຫຼືອຢູ່ ຫຼື ຕ່ຳກວ່າຄ່າທີ່ກຳນົດ</p>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <label style={{ fontSize: 13.5, color: 'var(--muted)' }}>ຄົງເຫຼືອຕ່ຳກວ່າ</label>
-          <input
-            type="number"
-            min="1"
-            value={limit}
-            onChange={(e) => setLimit(Number(e.target.value))}
-            style={{ width: 70, padding: '6px 8px', border: '1px solid var(--border)', borderRadius: 6 }}
-          />
-          <button className="btn secondary" onClick={() => load(limit)}>
-            ອັບເດດ
-          </button>
+    <div className="container-fluid p-3">
+      <div className="card shadow-sm mb-3">
+        <div className="card-body d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <h5 className="m-0 fw-bold text-danger">
+            <i className="fa-solid fa-triangle-exclamation me-2"></i>ແຈ້ງເຕືອນສິນຄ້າໃກ້ໝົດຄັງ
+          </h5>
+          <div className="d-flex align-items-center gap-2">
+            <label className="form-label m-0 small fw-bold text-nowrap">ຈຳນວນເຕືອນຂັ້ນຕ່ຳ:</label>
+            <input
+              type="number"
+              className="form-control form-control-sm"
+              value={limit}
+              style={{ width: 80 }}
+              onChange={(e) => setLimit(Number(e.target.value))}
+              onBlur={() => load(limit)}
+            />
+            <button className="btn btn-sm btn-primary fw-bold" onClick={() => load(limit)}>
+              <i className="fa-solid fa-rotate me-1"></i> ໂຫຼດໃໝ່
+            </button>
+          </div>
         </div>
       </div>
 
-      {loading ? (
-        <p className="empty-state">ກຳລັງໂຫຼດ...</p>
-      ) : items.length === 0 ? (
-        <p className="empty-state">ບໍ່ມີສິນຄ້າໃກ້ໝົດຄັງ 🎉</p>
-      ) : (
-        <table className="ledger-table">
-          <thead>
-            <tr>
-              <th>ລະຫັດ</th>
-              <th>ຊື່</th>
-              <th>ໝວດໝູ່</th>
-              <th className="num">ຄົງເຫຼືອ</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((p) => (
-              <tr key={p.barcode}>
-                <td>{p.barcode}</td>
-                <td>{p.name}</td>
-                <td>{p.category}</td>
-                <td className="num">
-                  <span className="tag danger">
-                    {p.stock} {p.unit}
-                  </span>
-                </td>
-                <td>
-                  <Link href="/receive" className="btn secondary" style={{ padding: '5px 10px', fontSize: 12.5 }}>
-                    ຮັບເຂົ້າຄັງ →
-                  </Link>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-    </>
+      <div className="card shadow-sm">
+        <div className="card-body p-0">
+          <div className="table-responsive">
+            <table className="table table-hover align-middle m-0 small">
+              <thead className="table-light">
+                <tr>
+                  <th>ລະຫັດບາໂຄ້ດ</th>
+                  <th>ຊື່ສິນຄ້າ</th>
+                  <th>ໝວດໝູ່</th>
+                  <th className="text-center">ຈຳນວນເຫຼືອ</th>
+                  <th className="text-center">ສະຖານະ</th>
+                  <th className="text-center">ຈັດການ</th>
+                </tr>
+              </thead>
+              <tbody>
+                {items === null ? (
+                  <tr><td colSpan={6} className="text-center py-4"><span className="spinner-border spinner-border-sm me-2"></span>ກຳລັງກວດສອບສະຕັອກ...</td></tr>
+                ) : items.length === 0 ? (
+                  <tr><td colSpan={6} className="text-center py-4 text-success fw-bold"><i className="fa-solid fa-circle-check me-2"></i>ບໍ່ມີສິນຄ້າໃກ້ໝົດຄັງ! (ສະຕັອກປົກກະຕິດີ)</td></tr>
+                ) : (
+                  items.map((item) => {
+                    const isOut = item.stock <= 0;
+                    return (
+                      <tr key={item.barcode}>
+                        <td className="fw-bold">{item.barcode}</td>
+                        <td className="fw-bold text-dark">{item.name}</td>
+                        <td><span className="badge bg-secondary">{item.category}</span></td>
+                        <td className={`text-center fw-bold fs-6 ${isOut ? 'text-danger' : 'text-warning-emphasis'}`}>{item.stock} {item.unit}</td>
+                        <td className="text-center"><span className={`badge ${isOut ? 'bg-danger' : 'bg-warning text-dark'}`}>{isOut ? 'ໝົດຄັງ' : 'ໃກ້ໝົດ'}</span></td>
+                        <td className="text-center">
+                          <button className="btn btn-sm btn-outline-primary fw-bold py-0" onClick={() => goToReceive(item.barcode, item.name)}>
+                            <i className="fa-solid fa-box-open me-1"></i> ເຕີມສະຕັອກ
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
