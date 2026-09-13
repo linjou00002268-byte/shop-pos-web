@@ -124,6 +124,12 @@ th, .fw-bold, h3 { font-weight: bold !important; }
   justify-content: center;
   padding: 16px;
 }
+.app-modal-backdrop .modal-content {
+  background: #fff;
+  border-radius: 12px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
 
 @media print {
   body * { visibility: hidden !important; }
