@@ -2,8 +2,9 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { createClient } from '@/lib/supabase-browser';
 
 const LINKS = [
   { href: '/', label: 'ເດດບອດ (Dashboard)', icon: 'fa-chart-line' },
@@ -12,14 +13,28 @@ const LINKS = [
   { href: '/inventory', label: 'ສິນຄ້າທັງໝົດ', icon: 'fa-warehouse' },
   { href: '/history', label: 'ປະຫວັດການຂາຍ', icon: 'fa-clock-rotate-left' },
   { href: '/low-stock', label: 'ແຈ້ງເຕືອນສະຕັອກ', icon: 'fa-triangle-exclamation text-warning' },
+  { href: '/admin/logs', label: 'ບັນທຶກຂໍ້ຜິດພາດ', icon: 'fa-bug text-danger' },
 ];
 
 export default function Sidebar({ children }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [show, setShow] = useState(false);
 
   function toggleSidebar() {
     setShow((s) => !s);
+  }
+
+  async function handleLogout() {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push('/login');
+    router.refresh();
+  }
+
+  // ໜ້າ login ບໍ່ຕ້ອງການ sidebar/mobile header ຄອບ — ສະແດງ children ຢ່າງດຽວ
+  if (pathname === '/login') {
+    return <>{children}</>;
   }
 
   return (
@@ -66,6 +81,11 @@ export default function Sidebar({ children }) {
             </li>
           ))}
         </ul>
+        <div className="px-3 pb-3 mt-auto">
+          <button className="btn btn-outline-light btn-sm w-100" onClick={handleLogout}>
+            <i className="fa-solid fa-right-from-bracket me-2"></i>ອອກຈາກລະບົບ
+          </button>
+        </div>
       </div>
 
       <div className="main-content">

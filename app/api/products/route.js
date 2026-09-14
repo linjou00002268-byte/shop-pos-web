@@ -3,6 +3,7 @@
 
 import { supabase } from '@/lib/supabase';
 import { NextResponse } from 'next/server';
+import { validateNonEmptyString, validateNonNegativeNumber, collectErrors } from '@/lib/validate';
 
 // GET /api/products  -> ລາຍການສິນຄ້າທັງໝົດ ພ້ອມສະຖານະສະຕັອກ (ຄືເດີມ getAllProductsReport)
 export async function GET() {
@@ -41,6 +42,18 @@ export async function POST(request) {
       { error: 'ຕ້ອງໃສ່ id ແລະ name' },
       { status: 400 }
     );
+  }
+
+  const errors = collectErrors([
+    validateNonEmptyString(body.id, 'ລະຫັດສິນຄ້າ'),
+    validateNonEmptyString(body.name, 'ຊື່ສິນຄ້າ'),
+    validateNonNegativeNumber(body.cost, 'ລາຄາທຶນ'),
+    validateNonNegativeNumber(body.price, 'ລາຄາຂາຍ'),
+    validateNonNegativeNumber(body.stock, 'ສະຕັອກເລີ່ມຕົ້ນ'),
+    validateNonNegativeNumber(body.reorder, 'ຈຸດສັ່ງເພີ່ມ'),
+  ]);
+  if (errors.length > 0) {
+    return NextResponse.json({ error: errors[0], errors }, { status: 400 });
   }
 
   const { data: existing } = await supabase

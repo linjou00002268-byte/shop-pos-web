@@ -9,6 +9,21 @@ function fmtDate(iso) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+// ສ້າງ ແລະ ດາວໂຫຼດໄຟລ໌ CSV ຈາກ array ຂອງ object (ບໍ່ຕ້ອງ npm install ເພີ່ມ)
+function downloadCsv(filename, rows, headers) {
+  const escape = (val) => `"${String(val ?? '').replace(/"/g, '""')}"`;
+  const lines = [headers.map(escape).join(',')];
+  rows.forEach((row) => lines.push(headers.map((h) => escape(row[h])).join(',')));
+  const csv = '\uFEFF' + lines.join('\r\n'); // \uFEFF = BOM ໃຫ້ Excel ອ່ານພາສາລາວຖືກ
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export default function HistoryPage() {
   const [masterRows, setMasterRows] = useState([]); // flattened: {date, orderId, prodId, prodName, qty, total}
   const [search, setSearch] = useState('');
@@ -111,6 +126,17 @@ export default function HistoryPage() {
     });
   }
 
+  function exportCsv() {
+    downloadCsv(
+      `sales-history-${new Date().toISOString().split('T')[0]}.csv`,
+      filtered.map((r) => ({
+        'ວັນທີ-ເວລາ': r.date, 'ລະຫັດບິນ': r.orderId, 'ລະຫັດສິນຄ້າ': r.prodId,
+        'ຊື່ສິນຄ້າ': r.prodName, 'ຈຳນວນ': r.qty, 'ຍອດລວມ': r.total,
+      })),
+      ['ວັນທີ-ເວລາ', 'ລະຫັດບິນ', 'ລະຫັດສິນຄ້າ', 'ຊື່ສິນຄ້າ', 'ຈຳນວນ', 'ຍອດລວມ']
+    );
+  }
+
   return (
     <div className="container-fluid p-0">
       <div className="card shadow-sm p-3">
@@ -120,6 +146,12 @@ export default function HistoryPage() {
             <small className="text-muted">ກວດສອບລາຍການບິນຂາຍ ແລະ ຄົ້ນຫາຕາມຊ່ວງວັນທີ</small>
           </div>
           <div className="badge bg-primary fs-6 py-2 px-3">ຍອດຂາຍລວມ: {totalSales.toLocaleString()} LAK</div>
+        </div>
+
+        <div className="d-flex justify-content-end mb-2">
+          <button className="btn btn-sm btn-outline-success fw-bold" onClick={exportCsv} disabled={filtered.length === 0}>
+            <i className="fa-solid fa-file-csv me-1"></i> Export CSV
+          </button>
         </div>
 
         <div className="row g-2 mb-3">

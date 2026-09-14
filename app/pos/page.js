@@ -8,6 +8,7 @@ export default function PosPage() {
   const [suggestions, setSuggestions] = useState([]);
   const [cart, setCart] = useState([]);
   const [printReceipt, setPrintReceipt] = useState(true);
+  const [paperWidth, setPaperWidth] = useState('58'); // '58' ຫຼື '80' (mm) — ຂະໜາດເຈ້ຍເຄື່ອງພິມບິນ
   const [showModal, setShowModal] = useState(false);
   const [cashStr, setCashStr] = useState('');
   const [confirming, setConfirming] = useState(false);
@@ -156,11 +157,14 @@ export default function PosPage() {
     const now = new Date();
     const dateStr = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()} ${now.getHours()}:${now.getMinutes()}`;
     const changeAmount = Math.max(0, cash - grandTotal);
-    let html = `<div style="font-family:'Saysettha OT', sans-serif; width:280px; padding:10px; margin:0 auto; color:#000;">
-      <div style="text-align:center; font-weight:bold; font-size:16px;">ໃບບິນຮັບເງິນ</div>
-      <div style="text-align:center; font-size:12px; margin-bottom:10px;">My Shop POS</div>
-      <div style="font-size:11px; border-bottom:1px dashed #000; padding-bottom:5px;">ວັນທີ: ${dateStr}</div>
-      <table style="width:100%; font-size:11px; margin-top:5px; border-collapse:collapse;">`;
+    // ຄວາມກວ້າງເຈ້ຍ: 58mm ≈ 200px, 80mm ≈ 280px (ອີງຕາມມາດຕະຖານເຄື່ອງພິມບິນທົ່ວໄປ)
+    const widthPx = paperWidth === '80' ? 280 : 200;
+    const fontSize = paperWidth === '80' ? 12 : 10.5;
+    let html = `<div style="font-family:'Saysettha OT', sans-serif; width:${widthPx}px; padding:8px; margin:0 auto; color:#000; font-size:${fontSize}px;">
+      <div style="text-align:center; font-weight:bold; font-size:${fontSize + 4}px;">ໃບບິນຮັບເງິນ</div>
+      <div style="text-align:center; font-size:${fontSize - 1}px; margin-bottom:8px;">My Shop POS</div>
+      <div style="font-size:${fontSize - 1}px; border-bottom:1px dashed #000; padding-bottom:4px;">ວັນທີ: ${dateStr}</div>
+      <table style="width:100%; font-size:${fontSize - 1}px; margin-top:4px; border-collapse:collapse;">`;
     printCart.forEach((item) => {
       const sum = item.price * item.qty;
       html += `<tr><td style="padding:3px 0;">${item.name}<br><small>${item.qty} x ${item.price.toLocaleString()}</small></td><td style="text-align:right; vertical-align:bottom;">${sum.toLocaleString()}</td></tr>`;
@@ -279,6 +283,16 @@ export default function PosPage() {
                   <i className="fa-solid fa-print me-1 text-secondary"></i> ພິມບິນໃຫ້ລູກຄ້າ
                 </label>
               </div>
+
+              {printReceipt && (
+                <div className="mb-3 d-flex align-items-center gap-2">
+                  <label className="small fw-bold text-secondary m-0">ຂະໜາດເຈ້ຍ:</label>
+                  <select className="form-select form-select-sm" style={{ width: 120 }} value={paperWidth} onChange={(e) => setPaperWidth(e.target.value)}>
+                    <option value="58">58 mm</option>
+                    <option value="80">80 mm</option>
+                  </select>
+                </div>
+              )}
 
               {printReceipt && (
                 <div>

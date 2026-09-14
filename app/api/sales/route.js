@@ -3,6 +3,7 @@
 
 import { supabase } from '@/lib/supabase';
 import { NextResponse } from 'next/server';
+import { logError } from '@/lib/logError';
 
 // POST /api/sales
 // body: { cart: [ { id, name, qty, price }, ... ] }
@@ -16,6 +17,19 @@ export async function POST(request) {
     return NextResponse.json({ error: 'ກະຕ່າສິນຄ້າຫວ່າງເປົ່າ' }, { status: 400 });
   }
 
+  // ກວດຄວາມຖືກຕ້ອງຂອງແຕ່ລະລາຍການໃນກະຕ່າ ກ່ອນສົ່ງໄປ RPC
+  for (const item of cart) {
+    if (!item.id) {
+      return NextResponse.json({ error: 'ມີລາຍການສິນຄ້າທີ່ບໍ່ມີລະຫັດ' }, { status: 400 });
+    }
+    if (!Number.isFinite(Number(item.qty)) || Number(item.qty) < 1) {
+      return NextResponse.json({ error: `ຈຳນວນຂອງ ${item.name || item.id} ຕ້ອງເປັນຈຳນວນເຕັມບວກ` }, { status: 400 });
+    }
+    if (!Number.isFinite(Number(item.price)) || Number(item.price) < 0) {
+      return NextResponse.json({ error: `ລາຄາຂອງ ${item.name || item.id} ບໍ່ຖືກຕ້ອງ` }, { status: 400 });
+    }
+  }
+
   // ແປງໃຫ້ກົງກັບ jsonb ທີ່ process_sale() ຄາດຫວັງ: [{id, qty, price}]
   const items = cart.map((item) => ({
     id: item.id,
@@ -27,6 +41,7 @@ export async function POST(request) {
 
   if (error) {
     // error.message ຈະເປັນຂໍ້ຄວາມ raise exception ຈາກ SQL ເຊັ່ນ "ສະຕັອກ X ບໍ່ພຽງພໍ"
+    await logError('POST /api/sales', error.message, { cart: items });
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
 

@@ -3,6 +3,8 @@
 
 import { supabase } from '@/lib/supabase';
 import { NextResponse } from 'next/server';
+import { validatePositiveInt, validateNonNegativeNumber, collectErrors } from '@/lib/validate';
+import { logError } from '@/lib/logError';
 
 // POST /api/stock/receive
 // body: { productId, qty, location, cost, price, unit }
@@ -10,11 +12,14 @@ import { NextResponse } from 'next/server';
 export async function POST(request) {
   const body = await request.json();
 
-  if (!body.productId || !body.qty) {
-    return NextResponse.json(
-      { error: 'ຕ້ອງໃສ່ productId ແລະ qty' },
-      { status: 400 }
-    );
+  const errors = collectErrors([
+    body.productId ? null : 'ຕ້ອງເລືອກສິນຄ້າ',
+    validatePositiveInt(body.qty, 'ຈຳນວນທີ່ຮັບເຂົ້າ'),
+    validateNonNegativeNumber(body.cost, 'ລາຄາທຶນ'),
+    validateNonNegativeNumber(body.price, 'ລາຄາຂາຍ'),
+  ]);
+  if (errors.length > 0) {
+    return NextResponse.json({ error: errors[0], errors }, { status: 400 });
   }
 
   const { data, error } = await supabase.rpc('receive_stock', {
@@ -27,6 +32,7 @@ export async function POST(request) {
   });
 
   if (error) {
+    await logError('POST /api/stock/receive', error.message, { body });
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
 

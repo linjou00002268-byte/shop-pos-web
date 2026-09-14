@@ -5,6 +5,21 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 const emptyForm = { id: '', name: '', category: '', newCategory: '', location: '', cost: '', price: '', qty: '0', unit: 'ອັນ' };
 
+// ສ້າງ ແລະ ດາວໂຫຼດໄຟລ໌ CSV ຈາກ array ຂອງ object (ບໍ່ຕ້ອງ npm install ເພີ່ມ)
+function downloadCsv(filename, rows, headers) {
+  const escape = (val) => `"${String(val ?? '').replace(/"/g, '""')}"`;
+  const lines = [headers.map(escape).join(',')];
+  rows.forEach((row) => lines.push(headers.map((h) => escape(row[h])).join(',')));
+  const csv = '\uFEFF' + lines.join('\r\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export default function InventoryPage() {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -112,6 +127,48 @@ export default function InventoryPage() {
     return Number(p.stock) <= (p.reorder_point ?? 5) ? 'text-danger' : 'text-success';
   }
 
+  function exportCsv() {
+    downloadCsv(
+      `inventory-${new Date().toISOString().split('T')[0]}.csv`,
+      filtered.map((p) => ({
+        'ລະຫັດ': p.id, 'ຊື່ສິນຄ້າ': p.name, 'ໝວດໝູ່': p.category, 'ບ່ອນເກັບ': p.location,
+        'ລາຄາທຶນ': p.cost, 'ລາຄາຂາຍ': p.price, 'ຄົງເຫຼືອ': p.stock, 'ຫົວໜ່ວຍ': p.unit,
+      })),
+      ['ລະຫັດ', 'ຊື່ສິນຄ້າ', 'ໝວດໝູ່', 'ບ່ອນເກັບ', 'ລາຄາທຶນ', 'ລາຄາຂາຍ', 'ຄົງເຫຼືອ', 'ຫົວໜ່ວຍ']
+    );
+  }
+
+  async function handleDelete() {
+    const result = await swalRef.current?.fire({
+      title: 'ຢືນຢັນການລຶບ?',
+      text: `ຕ້ອງການລຶບສິນຄ້າ "${form.name}" ອອກຈາກລະບົບຫຼືບໍ່? ການລຶບບໍ່ສາມາດກູ້ຄືນໄດ້`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#dc3545',
+      cancelButtonColor: '#6c757d',
+      confirmButtonText: 'ລຶບ',
+      cancelButtonText: 'ຍົກເລີກ',
+    });
+    if (!result?.isConfirmed) return;
+
+    setSubmitting(true);
+    try {
+      const res = await fetch(`/api/products/${form.id}`, { method: 'DELETE' });
+      const json = await res.json();
+      if (!res.ok) {
+        swalRef.current?.fire({ icon: 'error', title: 'ບໍ່ສາມາດລຶບໄດ້', text: json.error });
+        return;
+      }
+      swalRef.current?.fire({ icon: 'success', title: 'ລຶບສິນຄ້າສຳເລັດ', showConfirmButton: false, timer: 1200 });
+      setShowModal(false);
+      load();
+    } catch (err) {
+      swalRef.current?.fire({ icon: 'error', title: 'Error', text: err.message });
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   return (
     <div className="card p-3 shadow-sm border-0">
       <div className="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
@@ -133,6 +190,9 @@ export default function InventoryPage() {
           </div>
           <button className="btn btn-sm btn-success fw-bold px-3" onClick={openAdd}>
             <i className="fa-solid fa-plus-circle me-1"></i> ເພີ່ມສິນຄ້າໃໝ່
+          </button>
+          <button className="btn btn-sm btn-outline-success fw-bold px-3" onClick={exportCsv} disabled={filtered.length === 0}>
+            <i className="fa-solid fa-file-csv me-1"></i> Export CSV
           </button>
         </div>
       </div>
@@ -246,6 +306,11 @@ export default function InventoryPage() {
               </div>
             </div>
             <div className="modal-footer bg-light border-top-0">
+              {editMode && (
+                <button className="btn btn-outline-danger fw-bold btn-sm px-3 me-auto" onClick={handleDelete} disabled={submitting}>
+                  <i className="fa-solid fa-trash me-1"></i> ລຶບສິນຄ້ານີ້
+                </button>
+              )}
               <button className="btn btn-secondary fw-bold btn-sm px-3" onClick={() => setShowModal(false)}>🔒 ປິດ</button>
               <button className="btn btn-success fw-bold btn-sm px-3" onClick={handleSubmit} disabled={submitting}>
                 <i className="fa-solid fa-floppy-disk me-1"></i> {submitting ? 'ກຳລັງບັນທຶກ...' : 'ຢືນຢັນບັນທຶກ'}
