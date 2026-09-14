@@ -8,7 +8,7 @@ import { NextResponse } from 'next/server';
 // body: { name, category, cost, price, location, unit }
 // ໝາຍເຫດ: ບໍ່ແກ້ stock ຢູ່ນີ້ (ຄືເດີມ — ໃຫ້ໃຊ້ /api/stock/receive ແທນ)
 export async function PUT(request, { params }) {
-  const { id } = params;
+  const { id } = await params;
   const body = await request.json();
 
   const { data, error } = await supabase
