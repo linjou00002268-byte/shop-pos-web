@@ -2,10 +2,14 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useBranch } from '@/lib/BranchContext';
 
 const MONTH_LABELS = ['ມັງກອນ', 'ກຸມພາ', 'ມີນາ', 'ເມສາ', 'ພຶດສະພາ', 'ມິຖຸນາ', 'ກໍລະກົດ', 'ສິງຫາ', 'ກັນຍາ', 'ຕຸລາ', 'ພະຈິກ', 'ທັນວາ'];
 
 export default function DashboardPage() {
+  const { me, selectedBranchId, loading: branchLoading } = useBranch() || {};
+  const router = useRouter();
   const [dashData, setDashData] = useState(null);
   const [filterType, setFilterType] = useState('year');
   const [filterDate, setFilterDate] = useState('');
@@ -21,7 +25,9 @@ export default function DashboardPage() {
     const localISODate = new Date(now - offset).toISOString().split('T')[0];
     setFilterDate(localISODate);
 
-    fetch('/api/reports/dashboard')
+    if (!selectedBranchId) return;
+
+    fetch(`/api/reports/dashboard?branch_id=${selectedBranchId}`)
       .then((res) => res.json())
       .then((json) => setDashData(json));
 
@@ -31,7 +37,7 @@ export default function DashboardPage() {
         chartLibRef.current = { Chart: chartModule.default, datalabels: datalabelsModule.default };
       }
     );
-  }, []);
+  }, [selectedBranchId]);
 
   // ຄື processDashboardData — ຄິດໄລ່ຄືນທຸກຄັ້ງທີ່ຂໍ້ມູນ ຫຼື filter ປ່ຽນ
   useEffect(() => {
@@ -70,7 +76,7 @@ export default function DashboardPage() {
       totalSales += revenue;
       totalCost += cost;
       totalProfit += profit;
-      const pId = row.product_id;
+      const pId = row.product_barcode;
       if (!productSaleStats[pId]) {
         productSaleStats[pId] = { name: row.product_name, category: row.category || 'ທົ່ວໄປ', qty: 0, revenue: 0 };
       }
@@ -190,6 +196,20 @@ export default function DashboardPage() {
   }, [computed]);
 
   const dateDisabled = filterType === 'all' || filterType === 'year';
+
+  // ✅ Staff ບໍ່ມີສິດເບິ່ງ Dashboard — ເດັ້ງໄປໜ້າ POS ອັດຕະໂນມັດ
+  useEffect(() => {
+    if (!branchLoading && me && me.role !== 'admin') {
+      router.replace('/pos');
+    }
+  }, [branchLoading, me, router]);
+
+  if (branchLoading || !me) {
+    return <p className="text-muted">ກຳລັງກວດສອບສິດການໃຊ້ງານ...</p>;
+  }
+  if (me.role !== 'admin') {
+    return null; // ກຳລັງເດັ້ງໄປ /pos
+  }
 
   return (
     <div className="container-fluid p-0">

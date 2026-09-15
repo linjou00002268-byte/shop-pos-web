@@ -1,16 +1,19 @@
 // app/api/stock/receive/route.js
-// ແທນ GAS: updateStockReceive() / updateStockReceiveWithPrices()
-
 import { supabase } from '@/lib/supabase';
 import { NextResponse } from 'next/server';
 import { validatePositiveInt, validateNonNegativeNumber, collectErrors } from '@/lib/validate';
 import { logError } from '@/lib/logError';
+import { getUserContext } from '@/lib/getUserContext';
+import { resolveBranch } from '@/lib/resolveBranch';
 
-// POST /api/stock/receive
-// body: { productId, qty, location, cost, price, unit }
-// cost/price/unit ເປັນ optional — ຖ້າບໍ່ສົ່ງມາຈະບໍ່ປ່ຽນຄ່າເດີມ (ຄືເດີມ RPC ຈັດການໃຫ້)
+// POST /api/stock/receive   body: { branchId, productId, qty, location, cost, price, unit }
 export async function POST(request) {
+  const ctx = await getUserContext();
+  if (!ctx) return NextResponse.json({ error: 'ຕ້ອງເຂົ້າສູ່ລະບົບ' }, { status: 401 });
+
   const body = await request.json();
+  const resolved = resolveBranch(ctx, body.branchId);
+  if (resolved.error) return NextResponse.json({ error: resolved.error }, { status: resolved.status });
 
   const errors = collectErrors([
     body.productId ? null : 'ຕ້ອງເລືອກສິນຄ້າ',
@@ -23,6 +26,7 @@ export async function POST(request) {
   }
 
   const { data, error } = await supabase.rpc('receive_stock', {
+    p_branch_id: resolved.branchId,
     p_product_id: body.productId,
     p_qty: Number(body.qty),
     p_location: body.location || 'ບໍ່ມີ',
@@ -37,9 +41,5 @@ export async function POST(request) {
   }
 
   const result = data[0];
-  return NextResponse.json({
-    success: true,
-    newStock: result.new_stock,
-    purchaseCode: result.purchase_code,
-  });
+  return NextResponse.json({ success: true, newStock: result.new_stock, purchaseCode: result.purchase_code });
 }

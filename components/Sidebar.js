@@ -5,14 +5,21 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { createClient } from '@/lib/supabase-browser';
+import { useBranch } from '@/lib/BranchContext';
 
 const LINKS = [
-  { href: '/', label: 'ເດດບອດ (Dashboard)', icon: 'fa-chart-line' },
+  { href: '/', label: 'ເດດບອດ (Dashboard)', icon: 'fa-chart-line', adminOnly: true },
   { href: '/pos', label: 'ໜ້າຂາຍສິນຄ້າ (POS)', icon: 'fa-cart-shopping' },
   { href: '/receive', label: 'ຮັບສິນຄ້າເຂົ້າຄັງ', icon: 'fa-box-open' },
   { href: '/inventory', label: 'ສິນຄ້າທັງໝົດ', icon: 'fa-warehouse' },
   { href: '/history', label: 'ປະຫວັດການຂາຍ', icon: 'fa-clock-rotate-left' },
   { href: '/low-stock', label: 'ແຈ້ງເຕືອນສະຕັອກ', icon: 'fa-triangle-exclamation text-warning' },
+];
+
+// ເມນູສະເພາະ admin (staff ຈະບໍ່ເຫັນ)
+const ADMIN_LINKS = [
+  { href: '/admin/branches', label: 'ຈັດການສາຂາ', icon: 'fa-code-branch' },
+  { href: '/admin/users', label: 'ຈັດການຜູ້ໃຊ້', icon: 'fa-users' },
   { href: '/admin/logs', label: 'ບັນທຶກຂໍ້ຜິດພາດ', icon: 'fa-bug text-danger' },
 ];
 
@@ -20,6 +27,7 @@ export default function Sidebar({ children }) {
   const pathname = usePathname();
   const router = useRouter();
   const [show, setShow] = useState(false);
+  const { me, branches, selectedBranchId, changeBranch, loading: branchLoading } = useBranch() || {};
 
   function toggleSidebar() {
     setShow((s) => !s);
@@ -67,8 +75,29 @@ export default function Sidebar({ children }) {
           ></button>
         </div>
         <hr className="mx-3 text-secondary mt-1" />
+
+        <div className="px-3 mb-2">
+          {branchLoading ? (
+            <small className="text-white-50">ກຳລັງໂຫຼດສາຂາ...</small>
+          ) : me?.role === 'admin' ? (
+            <select
+              className="form-select form-select-sm"
+              value={selectedBranchId || ''}
+              onChange={(e) => changeBranch(e.target.value)}
+            >
+              {branches.map((b) => (
+                <option key={b.id} value={b.id}>{b.name}</option>
+              ))}
+            </select>
+          ) : (
+            <div className="bg-dark bg-opacity-50 rounded px-2 py-1 small text-white-50">
+              <i className="fa-solid fa-shop me-1"></i>{branches[0]?.name || 'ສາຂາ'}
+            </div>
+          )}
+        </div>
+
         <ul className="nav nav-pills flex-column mb-auto">
-          {LINKS.map((link) => (
+          {LINKS.filter((link) => !link.adminOnly || me?.role === 'admin').map((link) => (
             <li key={link.href}>
               <Link
                 href={link.href}
@@ -80,6 +109,23 @@ export default function Sidebar({ children }) {
               </Link>
             </li>
           ))}
+          {me?.role === 'admin' && (
+            <>
+              <li><hr className="mx-3 text-secondary my-2" /></li>
+              <li className="px-4 mb-1"><small className="text-white-50">ຜູ້ດູແລລະບົບ</small></li>
+              {ADMIN_LINKS.map((link) => (
+                <li key={link.href}>
+                  <Link
+                    href={link.href}
+                    className={`nav-link${pathname === link.href ? ' active' : ''}`}
+                    onClick={() => setShow(false)}
+                  >
+                    <i className={`fa-solid ${link.icon} me-2`} style={{ width: 20 }}></i> {link.label}
+                  </Link>
+                </li>
+              ))}
+            </>
+          )}
         </ul>
         <div className="px-3 pb-3 mt-auto">
           <button className="btn btn-outline-light btn-sm w-100" onClick={handleLogout}>

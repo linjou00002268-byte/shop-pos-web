@@ -3,6 +3,7 @@
 
 import { Suspense, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { useBranch } from '@/lib/BranchContext';
 
 export default function ReceivePage() {
   return (
@@ -13,6 +14,7 @@ export default function ReceivePage() {
 }
 
 function ReceiveContent() {
+  const { selectedBranchId } = useBranch() || {};
   const [allProducts, setAllProducts] = useState([]);
   const [suggestions, setSuggestions] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -29,14 +31,17 @@ function ReceiveContent() {
 
   useEffect(() => {
     import('sweetalert2').then((m) => (swalRef.current = m.default));
-    loadData();
-    // ຖ້າມາຈາກໜ້າ Low Stock ດ້ວຍ ?barcode=xxx ໃຫ້ຄົ້ນຫາອັດຕະໂນມັດ
     const barcode = searchParams.get('barcode');
     if (barcode) {
       setForm((f) => ({ ...f, scan: barcode }));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (selectedBranchId) loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedBranchId]);
 
   useEffect(() => {
     const barcode = searchParams.get('barcode');
@@ -47,7 +52,7 @@ function ReceiveContent() {
   }, [allProducts]);
 
   function loadData() {
-    fetch('/api/products')
+    fetch(`/api/products?branch_id=${selectedBranchId}`)
       .then((res) => res.json())
       .then((json) => {
         const rows = json.products || [];
@@ -129,6 +134,7 @@ function ReceiveContent() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
+            branchId: selectedBranchId,
             id, name, category: finalCategory,
             cost: Number(form.cost) || 0, price: Number(form.price) || 0,
             stock: qty, location: form.location.trim() || 'ຄັງເດີມ', unit: form.unit.trim() || 'ອັນ',
@@ -145,6 +151,7 @@ function ReceiveContent() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
+            branchId: selectedBranchId,
             productId: id, qty, location: form.location.trim() || undefined,
             cost: form.cost ? Number(form.cost) : undefined, price: form.price ? Number(form.price) : undefined,
             unit: form.unit.trim() || undefined,

@@ -1,22 +1,32 @@
 // app/api/products/route.js
 // ແທນ GAS: getProducts() / getAllProductsReport() / addNewProduct()
+// ✅ ອັບເດດແລ້ວ: ກອງຕາມສາຂາ (branch_id) — ນີ້ຄືຕົວຢ່າງ pattern ໃຫ້ນຳໄປໃຊ້ກັບ route ອື່ນ
 
 import { supabase } from '@/lib/supabase';
 import { NextResponse } from 'next/server';
 import { validateNonEmptyString, validateNonNegativeNumber, collectErrors } from '@/lib/validate';
+import { getUserContext } from '@/lib/getUserContext';
+import { resolveBranch } from '@/lib/resolveBranch';
 
-// GET /api/products  -> ລາຍການສິນຄ້າທັງໝົດ ພ້ອມສະຖານະສະຕັອກ (ຄືເດີມ getAllProductsReport)
-export async function GET() {
+// GET /api/products?branch_id=xxx  -> ລາຍການສິນຄ້າສະເພາະສາຂານັ້ນ
+export async function GET(request) {
+  const ctx = await getUserContext();
+  if (!ctx) return NextResponse.json({ error: 'ຕ້ອງເຂົ້າສູ່ລະບົບ' }, { status: 401 });
+
+  const { searchParams } = new URL(request.url);
+  const resolved = resolveBranch(ctx, searchParams.get('branch_id'));
+  if (resolved.error) return NextResponse.json({ error: resolved.error }, { status: resolved.status });
+
   const { data, error } = await supabase
     .from('products')
     .select('*')
+    .eq('branch_id', resolved.branchId)
     .order('name', { ascending: true });
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // ຄິດໄລ່ status ຄືເດີມ (out_of_stock / low_stock / normal) ແລະ categories
   const categories = new Set();
   const products = data.map((p) => {
     categories.add(p.category);
@@ -33,16 +43,14 @@ export async function GET() {
 }
 
 // POST /api/products  -> ເພີ່ມສິນຄ້າໃໝ່ (ຄືເດີມ addNewProduct)
-// body: { id, name, category, cost, price, stock, location, reorder, unit }
+// body: { branchId, id, name, category, cost, price, stock, location, reorder, unit }
 export async function POST(request) {
-  const body = await request.json();
+  const ctx = await getUserContext();
+  if (!ctx) return NextResponse.json({ error: 'ຕ້ອງເຂົ້າສູ່ລະບົບ' }, { status: 401 });
 
-  if (!body.id || !body.name) {
-    return NextResponse.json(
-      { error: 'ຕ້ອງໃສ່ id ແລະ name' },
-      { status: 400 }
-    );
-  }
+  const body = await request.json();
+  const resolved = resolveBranch(ctx, body.branchId);
+  if (resolved.error) return NextResponse.json({ error: resolved.error }, { status: resolved.status });
 
   const errors = collectErrors([
     validateNonEmptyString(body.id, 'ລະຫັດສິນຄ້າ'),
@@ -56,15 +64,17 @@ export async function POST(request) {
     return NextResponse.json({ error: errors[0], errors }, { status: 400 });
   }
 
+  // ລະຫັດບາໂຄ້ດ (id) ບໍ່ຊ້ຳກັນສະເພາະ "ພາຍໃນສາຂາດຽວກັນ" — ສາຂາອື່ນໃຊ້ລະຫັດດຽວກັນໄດ້
   const { data: existing } = await supabase
     .from('products')
-    .select('id')
+    .select('row_id')
     .eq('id', body.id)
+    .eq('branch_id', resolved.branchId)
     .maybeSingle();
 
   if (existing) {
     return NextResponse.json(
-      { error: 'ລະຫັດສິນຄ້ານີ້ມີຢູ່ໃນລະບົບແລ້ວ' },
+      { error: 'ລະຫັດສິນຄ້ານີ້ມີຢູ່ໃນສາຂານີ້ແລ້ວ' },
       { status: 409 }
     );
   }
@@ -73,6 +83,7 @@ export async function POST(request) {
     .from('products')
     .insert({
       id: body.id,
+      branch_id: resolved.branchId,
       name: body.name,
       category: body.category || 'ທົ່ວໄປ',
       cost: Number(body.cost) || 0,
@@ -89,13 +100,12 @@ export async function POST(request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // ຖ້າມີສະຕັອກເລີ່ມຕົ້ນ > 0, ບັນທຶກເປັນ purchase ຄັ້ງທຳອິດ (ຄືເດີມ logPurchase)
-  // ໝາຍເຫດ: insert ໂດຍກົງໃສ່ purchases (ບໍ່ເອີ້ນ receive_stock RPC ເພາະ RPC ນັ້ນຈະ
-  // ບວກສະຕັອກເພີ່ມອີກຄັ້ງ ເຮັດໃຫ້ຊ້ຳກັບຄ່າ stock ທີ່ໃສ່ຕອນ insert ຂ້າງເທິງ)
   if (Number(body.stock) > 0) {
     await supabase.from('purchases').insert({
-      purchase_code: `PO-${Date.now()}`, // ຫຼືເອີ້ນ generate_code('PO') ຜ່ານ RPC ແຍກຕ່າງຫາກ
-      product_id: body.id,
+      purchase_code: `PO-${Date.now()}`,
+      branch_id: resolved.branchId,
+      product_row_id: data.row_id,
+      product_barcode: body.id,
       product_name: body.name,
       qty: Number(body.stock),
       unit_cost: Number(body.cost) || 0,

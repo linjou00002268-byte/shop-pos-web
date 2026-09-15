@@ -2,6 +2,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useBranch } from '@/lib/BranchContext';
 
 const emptyForm = { id: '', name: '', category: '', newCategory: '', location: '', cost: '', price: '', qty: '0', unit: 'ອັນ' };
 
@@ -21,6 +22,7 @@ function downloadCsv(filename, rows, headers) {
 }
 
 export default function InventoryPage() {
+  const { selectedBranchId } = useBranch() || {};
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [search, setSearch] = useState('');
@@ -32,11 +34,15 @@ export default function InventoryPage() {
 
   useEffect(() => {
     import('sweetalert2').then((m) => (swalRef.current = m.default));
-    load();
   }, []);
 
+  useEffect(() => {
+    if (selectedBranchId) load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedBranchId]);
+
   function load() {
-    fetch('/api/products')
+    fetch(`/api/products?branch_id=${selectedBranchId}`)
       .then((res) => res.json())
       .then((json) => {
         setProducts(json.products || []);
@@ -88,6 +94,7 @@ export default function InventoryPage() {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
+            branchId: selectedBranchId,
             name, category: finalCategory, cost: Number(form.cost) || 0, price: Number(form.price) || 0,
             location: form.location.trim() || 'ຄັງເດີມ', unit: form.unit.trim() || 'ອັນ',
           }),
@@ -103,6 +110,7 @@ export default function InventoryPage() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
+            branchId: selectedBranchId,
             id, name, category: finalCategory, cost: Number(form.cost) || 0, price: Number(form.price) || 0,
             stock: Number(form.qty) || 0, location: form.location.trim() || 'ຄັງເດີມ', unit: form.unit.trim() || 'ອັນ',
           }),
@@ -153,7 +161,7 @@ export default function InventoryPage() {
 
     setSubmitting(true);
     try {
-      const res = await fetch(`/api/products/${form.id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/products/${form.id}?branch_id=${selectedBranchId}`, { method: 'DELETE' });
       const json = await res.json();
       if (!res.ok) {
         swalRef.current?.fire({ icon: 'error', title: 'ບໍ່ສາມາດລຶບໄດ້', text: json.error });
@@ -203,9 +211,9 @@ export default function InventoryPage() {
             <tr className="text-secondary text-nowrap">
               <th style={{ width: 120 }}>ລະຫັດ / ບາໂຄ້ດ</th>
               <th>ລາຍລະອຽດສິນຄ້າ</th>
-              <th style={{ width: 130 }}>ໝວດໝູ່</th>
-              <th style={{ width: 100 }}>ສະຖານທີ່ເກັບ</th>
-              <th className="text-end" style={{ width: 120 }}>ລາຄາທຶນ</th>
+              <th className="d-mobile-hide" style={{ width: 130 }}>ໝວດໝູ່</th>
+              <th className="d-mobile-hide" style={{ width: 100 }}>ສະຖານທີ່ເກັບ</th>
+              <th className="d-mobile-hide text-end" style={{ width: 120 }}>ລາຄາທຶນ</th>
               <th className="text-end" style={{ width: 120 }}>ລາຄາຂາຍ</th>
               <th className="text-end" style={{ width: 125 }}>ຍອດຄັງເຫຼືອ</th>
               <th className="text-center" style={{ width: 90 }}>ຈັດການ</th>
@@ -219,9 +227,9 @@ export default function InventoryPage() {
                 <tr key={p.id}>
                   <td className="fw-bold text-secondary">{p.id}</td>
                   <td><strong className="text-dark">{p.name}</strong></td>
-                  <td><span className="badge bg-light text-dark border px-2 py-1">{p.category}</span></td>
-                  <td className="text-muted"><i className="fa-solid fa-location-dot me-1 text-danger small"></i>{p.location || '-'}</td>
-                  <td className="text-end text-secondary">{Number(p.cost).toLocaleString()}</td>
+                  <td className="d-mobile-hide"><span className="badge bg-light text-dark border px-2 py-1">{p.category}</span></td>
+                  <td className="d-mobile-hide text-muted"><i className="fa-solid fa-location-dot me-1 text-danger small"></i>{p.location || '-'}</td>
+                  <td className="d-mobile-hide text-end text-secondary">{Number(p.cost).toLocaleString()}</td>
                   <td className="text-end fw-bold text-primary">{Number(p.price).toLocaleString()}</td>
                   <td className={`text-end fw-bold ${stockClass(p)}`}>
                     {Number(p.stock).toLocaleString()} <small className="text-muted fw-normal">{p.unit}</small>

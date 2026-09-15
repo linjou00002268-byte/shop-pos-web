@@ -1,6 +1,7 @@
 // app/layout.js
 import './globals.css';
 import Sidebar from '@/components/Sidebar';
+import { BranchProvider } from '@/lib/BranchContext';
 
 export const metadata = {
   title: 'POS & Inventory Management System',
@@ -21,7 +22,9 @@ export default function RootLayout({ children }) {
         />
       </head>
       <body>
-        <Sidebar>{children}</Sidebar>
+        <BranchProvider>
+          <Sidebar>{children}</Sidebar>
+        </BranchProvider>
       </body>
     </html>
   );

@@ -2,6 +2,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useBranch } from '@/lib/BranchContext';
 
 function fmtDate(iso) {
   const d = new Date(iso);
@@ -25,6 +26,7 @@ function downloadCsv(filename, rows, headers) {
 }
 
 export default function HistoryPage() {
+  const { selectedBranchId } = useBranch() || {};
   const [masterRows, setMasterRows] = useState([]); // flattened: {date, orderId, prodId, prodName, qty, total}
   const [search, setSearch] = useState('');
   const [startDate, setStartDate] = useState('');
@@ -35,7 +37,11 @@ export default function HistoryPage() {
     import('sweetalert2').then((m) => (swalRef.current = m.default));
     const today = new Date().toISOString().split('T')[0];
     setStartDate(today);
-    fetch('/api/sales')
+  }, []);
+
+  useEffect(() => {
+    if (!selectedBranchId) return;
+    fetch(`/api/sales?branch_id=${selectedBranchId}`)
       .then((res) => res.json())
       .then((json) => {
         const rows = [];
@@ -44,7 +50,7 @@ export default function HistoryPage() {
             rows.push({
               date: fmtDate(sale.created_at),
               orderId: sale.sale_code,
-              prodId: item.product_id,
+              prodId: item.product_barcode,
               prodName: item.product_name,
               qty: item.qty,
               total: Number(item.total_price),
@@ -53,7 +59,7 @@ export default function HistoryPage() {
         });
         setMasterRows(rows);
       });
-  }, []);
+  }, [selectedBranchId]);
 
   const filtered = useMemo(() => {
     const s = search.toLowerCase().trim();

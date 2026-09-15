@@ -3,8 +3,10 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useBranch } from '@/lib/BranchContext';
 
 export default function LowStockPage() {
+  const { selectedBranchId } = useBranch() || {};
   const [items, setItems] = useState(null); // null = loading
   const [limit, setLimit] = useState(5);
   const swalRef = useRef(null);
@@ -12,12 +14,16 @@ export default function LowStockPage() {
 
   useEffect(() => {
     import('sweetalert2').then((m) => (swalRef.current = m.default));
-    load(5);
   }, []);
+
+  useEffect(() => {
+    if (selectedBranchId) load(limit);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedBranchId]);
 
   function load(l) {
     setItems(null);
-    fetch(`/api/products/low-stock?limit=${l}`)
+    fetch(`/api/products/low-stock?branch_id=${selectedBranchId}&limit=${l}`)
       .then((res) => res.json())
       .then((json) => setItems(Array.isArray(json) ? json : []));
   }

@@ -29,6 +29,8 @@ body {
   left: 0;
   z-index: 1000;
   padding-top: 20px;
+  padding-bottom: 20px;
+  overflow-y: auto;
   transition: all 0.3s;
 }
 
@@ -39,8 +41,8 @@ body {
   min-height: 100vh;
 }
 
-.nav-link {
-  color: #ecf0f1;
+.sidebar .nav-link {
+  color: rgba(255, 255, 255, 0.85) !important;
   cursor: pointer;
   border-radius: 8px;
   margin: 5px 10px;
@@ -51,9 +53,9 @@ body {
   font-family: 'Saysettha OT', sans-serif !important;
 }
 
-.nav-link:hover, .nav-link.active {
-  background: #34495e;
-  color: #3498db;
+.sidebar .nav-link:hover, .sidebar .nav-link.active {
+  background: #34495e !important;
+  color: #ffffff !important;
   font-weight: bold;
 }
 
@@ -97,6 +99,32 @@ th, .fw-bold, h3 { font-weight: bold !important; }
   .sidebar-overlay.show { display: block; }
 }
 
+/* ---- ຄວາມແໜ້ນໜາເທິງຈໍນ້ອຍ (ມືຖື) — ໜ້າ POS ແລະ Inventory ໂດຍສະເພາະ ---- */
+@media (max-width: 575.98px) {
+  .main-content { padding: 10px; }
+  .card { border-radius: 10px; }
+  .card.p-3 { padding: 0.75rem !important; }
+
+  /* POS: ແຖວສິນຄ້າໃນກະຕ່າ — ຫຍໍ້ຂະໜາດ ແລະ ອະນຸຍາດໃຫ້ wrap ແທນທີ່ຈະຖືກບີບຈົນລົ້ນ */
+  .cart-item-row { flex-wrap: wrap; gap: 6px; padding: 10px 6px !important; }
+  .cart-item-row .cart-qty-input { width: 46px !important; }
+  .cart-item-row .cart-line-total { min-width: 70px !important; font-size: 13px; }
+
+  /* ຕົວອັກສອນ ແລະ padding ຂອງຕາຕະລາງໃຫ້ນ້ອຍລົງ ບໍ່ໃຫ້ບີບຈົນອ່ານຍາກ */
+  .table.small, table.small { font-size: 12px; }
+  .table td, .table th { padding: 0.4rem 0.35rem; }
+
+  /* ຊ້ອນ column ທີ່ບໍ່ຈຳເປັນທີ່ສຸດເທິງຈໍນ້ອຍ (ຍັງເບິ່ງໄດ້ຄົບຖ້ວນຜ່ານການເລື່ອນຂວາ/ກົດແກ້ໄຂ) */
+  .d-mobile-hide { display: none !important; }
+
+  /* ໜ້າຈໍຊຳລະເງິນ (numpad) — ຫຍໍ້ຂະໜາດປຸ່ມລົງເລັກນ້ອຍ ໃຫ້ພໍດີຈໍ */
+  .app-modal-backdrop .modal-content { max-width: 100% !important; }
+  .app-modal-backdrop .btn.fs-5 { font-size: 1.1rem !important; padding: 10px 0 !important; }
+
+  /* ສິນຄ້າແນະນຳ POS — ໃຫ້ຕົວອັກສອນນ້ອຍລົງບ່ອນຄັບແຄບ */
+  .row-cols-2 .btn { font-size: 11.5px !important; }
+}
+
 /* ---- extra rules used across ported pages (cart, receipt, custom modal) ---- */
 .cart-item-row { transition: all 0.2s; }
 .cart-item-row:hover { background-color: rgba(0,0,0,0.02); }
@@ -124,6 +152,7 @@ th, .fw-bold, h3 { font-weight: bold !important; }
   justify-content: center;
   padding: 16px;
 }
+
 .app-modal-backdrop .modal-content {
   background: #fff;
   border-radius: 12px;

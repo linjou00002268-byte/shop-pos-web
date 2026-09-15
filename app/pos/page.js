@@ -2,8 +2,10 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useBranch } from '@/lib/BranchContext';
 
 export default function PosPage() {
+  const { selectedBranchId } = useBranch() || {};
   const [allProducts, setAllProducts] = useState([]);
   const [suggestions, setSuggestions] = useState([]);
   const [cart, setCart] = useState([]);
@@ -18,11 +20,15 @@ export default function PosPage() {
 
   useEffect(() => {
     import('sweetalert2').then((m) => (swalRef.current = m.default));
-    loadProducts();
   }, []);
 
+  useEffect(() => {
+    if (selectedBranchId) loadProducts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedBranchId]);
+
   function loadProducts() {
-    fetch('/api/products')
+    fetch(`/api/products?branch_id=${selectedBranchId}`)
       .then((res) => res.json())
       .then((json) => {
         const rows = json.products || [];
@@ -133,7 +139,7 @@ export default function PosPage() {
       const res = await fetch('/api/sales', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cart: cart.map((c) => ({ id: c.id, qty: c.qty, price: c.price })) }),
+        body: JSON.stringify({ branchId: selectedBranchId, cart: cart.map((c) => ({ id: c.id, qty: c.qty, price: c.price })) }),
       });
       const json = await res.json();
       if (!res.ok) {
@@ -219,10 +225,10 @@ export default function PosPage() {
                         min="1"
                         value={item.qty}
                         onChange={(e) => updateQty(item.id, Number(e.target.value))}
-                        className="form-control form-control-sm text-center"
+                        className="form-control form-control-sm text-center cart-qty-input"
                         style={{ width: 60 }}
                       />
-                      <span className="fw-bold text-success" style={{ minWidth: 90, textAlign: 'right' }}>
+                      <span className="fw-bold text-success cart-line-total" style={{ minWidth: 90, textAlign: 'right' }}>
                         {(item.price * item.qty).toLocaleString()}
                       </span>
                       <button className="btn btn-sm btn-outline-danger" onClick={() => removeItem(item.id)}>
