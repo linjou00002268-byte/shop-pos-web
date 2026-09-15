@@ -67,7 +67,7 @@ export default function Sidebar({ children }) {
             <h4 className="text-white m-0">
               <i className="fa-solid fa-store me-2"></i> My Shop POS
             </h4>
-            <small className="text-muted">ລະບົບຈັດການຮ້ານຄ້າ</small>
+            <small className="text-white">ລະບົບຈັດການຮ້ານຄ້າ</small>
           </div>
           <button
             className="btn-close btn-close-white d-lg-none"
