@@ -65,7 +65,7 @@ export default function Sidebar({ children }) {
         <div className="px-4 mb-3 d-flex justify-content-between align-items-center">
           <div>
             <h4 className="text-white m-0">
-              <i className="fa-solid fa-store me-2"></i> My Shop POS
+              <i className="fa-solid fa-store me-2"></i> Lynn Tech POS
             </h4>
             <small className="text-white">ລະບົບຈັດການຮ້ານຄ້າ</small>
           </div>
