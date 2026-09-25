@@ -54,7 +54,7 @@ export default function Sidebar({ children }) {
 
       <div className="mobile-header">
         <h5 className="m-0">
-          <i className="fa-solid fa-store me-2"></i> My Shop POS
+          <i className="fa-solid fa-store me-2"></i> Lynn Tech POS
         </h5>
         <button className="btn btn-outline-light btn-sm" onClick={toggleSidebar}>
           <i className="fa-solid fa-bars fa-lg"></i>
